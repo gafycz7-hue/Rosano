@@ -1,0 +1,319 @@
+-- ZYROO Admin Script
+-- Head Admin Panel s kompletními právy
+
+local ZYROO = {}
+
+-- Konfigurace Admin práv
+ZYROO.AdminRights = {
+    GodMode = false,
+    Fly = false,
+    Invisible = false,
+    UnlimitedAmmo = false,
+    NoRecoil = false,
+    SpeedHack = false,
+    Teleport = false
+}
+
+-- Seznam hráčů
+ZYROO.PlayerList = {}
+
+-- Animace
+local animationPhase = 0
+local animationColors = {
+    {255, 0, 0},    -- Červená
+    {0, 255, 0},    -- Zelená
+    {0, 0, 255},    -- Modrá
+    {255, 255, 0},  -- Žlutá
+    {255, 0, 255},  -- Růžová
+    {0, 255, 255}   -- Azurová
+}
+
+-- Hlavní Admin okno
+ZYROO.MainWindow = gui.Window("ZYROO_Admin", "🔥 ZYROO HEAD ADMIN PANEL v2.0 🔥", 100, 100, 350, 500)
+
+-- Tabule s animací
+ZYROO.TitleTab = ZYROO.MainWindow:Tab("ADMIN TITLE")
+ZYROO.TitleLabel = ZYROO.TitleTab:Label("🔥 ZYROO HEAD ADMIN 🔥", 20, 20)
+ZYROO.AdminStatus = ZYROO.TitleTab:Label("Status: ACTIVE", 20, 60)
+ZYROO.PowerLevel = ZYROO.TitleTab:Label("Power Level: MAXIMUM", 20, 90)
+
+-- Player Management
+ZYROO.PlayerTab = ZYROO.MainWindow:Tab("Player Management")
+ZYROO.PlayerListBox = ZYROO.PlayerTab:Listbox("Online Players", 20, 20, 200, 150)
+ZYROO.KickButton = ZYROO.PlayerTab:Button("KICK Player", 20, 180)
+ZYROO.BanButton = ZYROO.PlayerTab:Button("BAN Player", 120, 180)
+ZYROO.SlayButton = ZYROO.PlayerTab:Button("SLAY Player", 220, 180)
+ZYROO.FreezeButton = ZYROO.PlayerTab:Button("FREEZE Player", 20, 220)
+ZYROO.TeleportButton = ZYROO.PlayerTab:Button("TELEPORT To Player", 120, 220)
+
+-- Admin Powers
+ZYROO.PowersTab = ZYROO.MainWindow:Tab("Admin Powers")
+ZYROO.GodMode = ZYROO.PowersTab:Checkbox("GOD MODE", 20, 20)
+ZYROO.FlyMode = ZYROO.PowersTab:Checkbox("FLY MODE", 20, 50)
+ZYROO.Invisible = ZYROO.PowersTab:Checkbox("INVISIBLE", 20, 80)
+ZYROO.UnlimitedAmmo = ZYROO.PowersTab:Checkbox("UNLIMITED AMMO", 20, 110)
+ZYROO.NoRecoil = ZYROO.PowersTab:Checkbox("NO RECOIL", 20, 140)
+ZYROO.SpeedHack = ZYROO.PowersTab:Checkbox("SPEED HACK", 20, 170)
+ZYROO.SpeedSlider = ZYROO.PowersTab:Slider("Speed Multiplier", 1, 10, 3, 20, 200)
+
+-- Server Control
+ZYROO.ServerTab = ZYROO.MainWindow:Tab("Server Control")
+ZYROO.RestartRound = ZYROO.ServerTab:Button("RESTART ROUND", 20, 20)
+ZYROO.ChangeMap = ZYROO.ServerTab:Button("CHANGE MAP", 20, 60)
+ZYROO.ServerMessage = ZYROO.ServerTab:Textbox("Server Message", 20, 100, 200, 20)
+ZYROO.BroadcastButton = ZYROO.ServerTab:Button("BROADCAST", 20, 130)
+
+-- Weapon Control
+ZYROO.WeaponTab = ZYROO.MainWindow:Tab("Weapon Control")
+ZYROO.GiveWeapon = ZYROO.WeaponTab:Combobox("Give Weapon", 20, 20)
+ZYROO.GiveButton = ZYROO.WeaponTab:Button("GIVE WEAPON", 20, 60)
+ZYROO.InfiniteAmmo = ZYROO.WeaponTab:Checkbox("INFINITE AMMO", 20, 100)
+ZYROO.NoSpread = ZYROO.WeaponTab:Checkbox("NO SPREAD", 20, 130)
+ZYROO.RapidFire = ZYROO.WeaponTab:Checkbox("RAPID FIRE", 20, 160)
+
+-- Inicializace weapon listu
+local weaponList = {
+    "weapon_ak47",
+    "weapon_m4a1",
+    "weapon_awp",
+    "weapon_deagle",
+    "weapon_knife",
+    "weapon_hegrenade",
+    "weapon_flashbang",
+    "weapon_smokegrenade"
+}
+
+for _, weapon in ipairs(weaponList) do
+    ZYROO.GiveWeapon:AddOption(weapon)
+end
+
+-- Funkce pro aktualizaci seznamu hráčů
+function UpdatePlayerList()
+    ZYROO.PlayerListBox:Clear()
+    ZYROO.PlayerList = {}
+    
+    local players = entities.FindByClass("CCSPlayer")
+    for _, player in pairs(players) do
+        if player:IsPlayer() and player:IsAlive() then
+            local playerName = player:GetName()
+            local playerIndex = player:GetIndex()
+            
+            ZYROO.PlayerList[playerName] = playerIndex
+            ZYROO.PlayerListBox:AddOption(playerName)
+        end
+    end
+end
+
+-- Funkce pro získání vybraného hráče
+function GetSelectedPlayer()
+    local selectedPlayer = ZYROO.PlayerListBox:GetValue()
+    if selectedPlayer and ZYROO.PlayerList[selectedPlayer] then
+        return entities.GetByIndex(ZYROO.PlayerList[selectedPlayer])
+    end
+    return nil
+end
+
+-- Admin funkce
+function KickPlayer()
+    local player = GetSelectedPlayer()
+    if player then
+        client.Command("kickid " .. player:GetIndex() .. " \"Kicked by ZYROO Admin\"", true)
+        print("🔴 Kicked player: " .. player:GetName())
+    end
+end
+
+function BanPlayer()
+    local player = GetSelectedPlayer()
+    if player then
+        client.Command("banid 60 " .. player:GetIndex() .. " kick", true)
+        print("🔴 Banned player: " .. player:GetName() .. " for 60 minutes")
+    end
+end
+
+function SlayPlayer()
+    local player = GetSelectedPlayer()
+    if player then
+        client.Command("sm_slay #" .. player:GetIndex(), true)
+        print("💀 Slayed player: " .. player:GetName())
+    end
+end
+
+function FreezePlayer()
+    local player = GetSelectedPlayer()
+    if player then
+        client.Command("sm_freeze #" .. player:GetIndex(), true)
+        print("❄️ Frozen player: " .. player:GetName())
+    end
+end
+
+function TeleportToPlayer()
+    local player = GetSelectedPlayer()
+    local localPlayer = entities.GetLocalPlayer()
+    
+    if player and localPlayer then
+        local targetPos = player:GetAbsOrigin()
+        localPlayer:SetAbsOrigin(targetPos)
+        print("🚀 Teleported to: " .. player:GetName())
+    end
+end
+
+-- Admin powers funkce
+function ApplyGodMode()
+    local localPlayer = entities.GetLocalPlayer()
+    if localPlayer and ZYROO.GodMode:GetValue() then
+        localPlayer:SetHealth(99999)
+        ZYROO.AdminRights.GodMode = true
+    else
+        ZYROO.AdminRights.GodMode = false
+    end
+end
+
+function ApplyFlyMode()
+    if ZYROO.FlyMode:GetValue() then
+        ZYROO.AdminRights.Fly = true
+        -- Fly mode implementace
+        client.Command("sv_cheats 1; noclip", true)
+    else
+        ZYROO.AdminRights.Fly = false
+        client.Command("noclip", true)
+    end
+end
+
+function ApplySpeedHack()
+    local localPlayer = entities.GetLocalPlayer()
+    if localPlayer and ZYROO.SpeedHack:GetValue() then
+        local speed = ZYROO.SpeedSlider:GetValue()
+        ZYROO.AdminRights.SpeedHack = true
+        -- Speed hack implementace
+        client.Command("host_timescale " .. speed, true)
+    else
+        ZYROO.AdminRights.SpeedHack = false
+        client.Command("host_timescale 1", true)
+    end
+end
+
+function ApplyInfiniteAmmo()
+    if ZYROO.InfiniteAmmo:GetValue() then
+        ZYROO.AdminRights.UnlimitedAmmo = true
+        client.Command("sv_infinite_ammo 1", true)
+    else
+        ZYROO.AdminRights.UnlimitedAmmo = false
+        client.Command("sv_infinite_ammo 0", true)
+    end
+end
+
+-- Server control funkce
+function RestartRound()
+    client.Command("mp_restartgame 1", true)
+    print("🔄 Round restarted by ZYROO Admin")
+end
+
+function ChangeMap()
+    client.Command("map de_dust2", true) -- Můžeš změnit na libovolnou mapu
+    print("🗺️ Map changed by ZYROO Admin")
+end
+
+function BroadcastMessage()
+    local message = ZYROO.ServerMessage:GetValue()
+    if message ~= "" then
+        client.Command('say "🔊 ADMIN: ' .. message .. '"', true)
+        print("📢 Broadcast: " .. message)
+    end
+end
+
+-- Weapon funkce
+function GiveSelectedWeapon()
+    local weapon = ZYROO.GiveWeapon:GetValue()
+    if weapon then
+        client.Command("give " .. weapon, true)
+        print("🔫 Gave weapon: " .. weapon)
+    end
+end
+
+-- Animace
+function AnimateTitle()
+    animationPhase = (animationPhase + 1) % (#animationColors * 10)
+    local colorIndex = math.floor(animationPhase / 10) + 1
+    local r, g, b = table.unpack(animationColors[colorIndex])
+    
+    local alpha = 200 + math.sin(globals.RealTime() * 8) * 55
+    ZYROO.TitleLabel:SetColor(r, g, b, alpha)
+    ZYROO.AdminStatus:SetColor(0, 255, 0, alpha)
+    ZYROO.PowerLevel:SetColor(255, 255, 0, alpha)
+end
+
+-- Callback funkce
+ZYROO.KickButton:SetCallback(KickPlayer)
+ZYROO.BanButton:SetCallback(BanPlayer)
+ZYROO.SlayButton:SetCallback(SlayPlayer)
+ZYROO.FreezeButton:SetCallback(FreezePlayer)
+ZYROO.TeleportButton:SetCallback(TeleportToPlayer)
+ZYROO.RestartRound:SetCallback(RestartRound)
+ZYROO.ChangeMap:SetCallback(ChangeMap)
+ZYROO.BroadcastButton:SetCallback(BroadcastMessage)
+ZYROO.GiveButton:SetCallback(GiveSelectedWeapon)
+
+-- Hlavní loop
+function OnDraw()
+    -- Aktualizace UI
+    UpdatePlayerList()
+    AnimateTitle()
+    
+    -- Aplikace Admin práv
+    ApplyGodMode()
+    ApplyFlyMode()
+    ApplySpeedHack()
+    ApplyInfiniteAmmo()
+    
+    -- Status indikátory
+    if ZYROO.AdminRights.GodMode then
+        ZYROO.AdminStatus:SetText("Status: GOD MODE ACTIVE")
+    else
+        ZYROO.AdminStatus:SetText("Status: ADMIN ACTIVE")
+    end
+    
+    -- No Reoil
+    if ZYROO.NoRecoil:GetValue() then
+        client.SetConVar("weapon_recoil_scale", 0, true)
+    else
+        client.SetConVar("weapon_recoil_scale", 2, true)
+    end
+    
+    -- No Spread
+    if ZYROO.NoSpread:GetValue() then
+        client.SetConVar("weapon_accuracy_nospread", 1, true)
+    else
+        client.SetConVar("weapon_accuracy_nospread", 0, true)
+    end
+end
+
+-- Inicializace
+function OnScriptLoad()
+    print("🎮 ZYROO HEAD ADMIN PANEL loaded!")
+    print("🔥 Admin rights: ACTIVATED")
+    print("⚡ Power level: MAXIMUM")
+    print("👑 Welcome, Head Admin!")
+    
+    -- Povolení cheatů
+    client.Command("sv_cheats 1", true)
+end
+
+-- Cleanup
+function OnScriptUnload()
+    -- Reset všech nastavení
+    client.Command("sv_cheats 0", true)
+    client.Command("host_timescale 1", true)
+    client.Command("sv_infinite_ammo 0", true)
+    client.SetConVar("weapon_recoil_scale", 2, true)
+    client.SetConVar("weapon_accuracy_nospread", 0, true)
+    
+    print("🔴 ZYROO ADMIN PANEL unloaded")
+    print("👋 Admin rights: DEACTIVATED")
+end
+
+-- Spuštění inicializace
+OnScriptLoad()
+
+print("🔥 ZYROO HEAD ADMIN SCRIPT READY! 🔥")
+print("👑 Full Admin privileges activated!")
+print("⚡ Use your powers wisely!")
