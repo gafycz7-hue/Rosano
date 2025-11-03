@@ -1,0 +1,422 @@
+-- ZYROO Mobile Admin Script
+-- Kompletní mobilní menu pro Roblox
+
+local ZYROO = {}
+
+-- Hlavní proměnné
+ZYROO.Player = game:GetService("Players").LocalPlayer
+ZYROO.Character = ZYROO.Player.Character or ZYROO.Player.CharacterAdded:Wait()
+ZYROO.Humanoid = ZYROO.Character:WaitForChild("Humanoid")
+ZYROO.HRP = ZYROO.Character:WaitForChild("HumanoidRootPart")
+
+-- Mobilní UI
+ZYROO.MobileUI = {}
+ZYROO.Buttons = {}
+
+-- Konfigurace
+ZYROO.Config = {
+    GodMode = false,
+    Fly = false,
+    Speed = 16,
+    JumpPower = 50,
+    Noclip = false,
+    InfiniteJump = false
+}
+
+-- Vytvoření mobilního UI
+function CreateMobileUI()
+    -- Hlavní ScreenGui
+    ZYROO.MobileUI.ScreenGui = Instance.new("ScreenGui")
+    ZYROO.MobileUI.ScreenGui.Name = "ZYROOMobileUI"
+    ZYROO.MobileUI.ScreenGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+    
+    -- Hlavní rámec
+    ZYROO.MobileUI.MainFrame = Instance.new("Frame")
+    ZYROO.MobileUI.MainFrame.Name = "MainFrame"
+    ZYROO.MobileUI.MainFrame.Size = UDim2.new(0, 300, 0, 400)
+    ZYROO.MobileUI.MainFrame.Position = UDim2.new(0, 10, 0, 10)
+    ZYROO.MobileUI.MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    ZYROO.MobileUI.MainFrame.BorderSizePixel = 0
+    ZYROO.MobileUI.MainFrame.Parent = ZYROO.MobileUI.ScreenGui
+    
+    -- Titulek
+    ZYROO.MobileUI.Title = Instance.new("TextLabel")
+    ZYROO.MobileUI.Title.Name = "Title"
+    ZYROO.MobileUI.Title.Size = UDim2.new(1, 0, 0, 40)
+    ZYROO.MobileUI.Title.Position = UDim2.new(0, 0, 0, 0)
+    ZYROO.MobileUI.Title.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    ZYROO.MobileUI.Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ZYROO.MobileUI.Title.Text = "🔥 ZYROO MOBILE 🔥"
+    ZYROO.MobileUI.Title.TextScaled = true
+    ZYROO.MobileUI.Title.Font = Enum.Font.GothamBold
+    ZYROO.MobileUI.Title.Parent = ZYROO.MobileUI.MainFrame
+    
+    -- Scroll rámec pro tlačítka
+    ZYROO.MobileUI.ScrollingFrame = Instance.new("ScrollingFrame")
+    ZYROO.MobileUI.ScrollingFrame.Name = "ScrollingFrame"
+    ZYROO.MobileUI.ScrollingFrame.Size = UDim2.new(1, 0, 1, -40)
+    ZYROO.MobileUI.ScrollingFrame.Position = UDim2.new(0, 0, 0, 40)
+    ZYROO.MobileUI.ScrollingFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    ZYROO.MobileUI.ScrollingFrame.BorderSizePixel = 0
+    ZYROO.MobileUI.ScrollingFrame.ScrollBarThickness = 5
+    ZYROO.MobileUI.ScrollingFrame.Parent = ZYROO.MobileUI.MainFrame
+    
+    -- Tlačítko pro skrytí/zobrazení
+    ZYROO.MobileUI.ToggleButton = Instance.new("TextButton")
+    ZYROO.MobileUI.ToggleButton.Name = "ToggleButton"
+    ZYROO.MobileUI.ToggleButton.Size = UDim2.new(0, 60, 0, 60)
+    ZYROO.MobileUI.ToggleButton.Position = UDim2.new(0, 10, 0, 10)
+    ZYROO.MobileUI.ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    ZYROO.MobileUI.ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ZYROO.MobileUI.ToggleButton.Text = "📱"
+    ZYROO.MobileUI.ToggleButton.TextScaled = true
+    ZYROO.MobileUI.ToggleButton.Font = Enum.Font.GothamBold
+    ZYROO.MobileUI.ToggleButton.Parent = ZYROO.MobileUI.ScreenGui
+    
+    -- UIListLayout pro organizaci tlačítek
+    local UIListLayout = Instance.new("UIListLayout")
+    UIListLayout.Parent = ZYROO.MobileUI.ScrollingFrame
+    UIListLayout.Padding = UDim.new(0, 5)
+end
+
+-- Funkce pro vytvoření tlačítka
+function CreateButton(text, callback)
+    local button = Instance.new("TextButton")
+    button.Name = text
+    button.Size = UDim2.new(0.9, 0, 0, 50)
+    button.Position = UDim2.new(0.05, 0, 0, #ZYROO.Buttons * 55)
+    button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.Text = text
+    button.TextScaled = true
+    button.Font = Enum.Font.Gotham
+    button.Parent = ZYROO.MobileUI.ScrollingFrame
+    
+    button.MouseButton1Click:Connect(callback)
+    table.insert(ZYROO.Buttons, button)
+    
+    -- Aktualizace velikosti scrollovacího rámečku
+    ZYROO.MobileUI.ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, #ZYROO.Buttons * 55)
+end
+
+-- Funkce pro vytvoření toggle tlačítka
+function CreateToggleButton(text, initialState, callback)
+    local toggleState = initialState
+    
+    local button = Instance.new("TextButton")
+    button.Name = text
+    button.Size = UDim2.new(0.9, 0, 0, 50)
+    button.Position = UDim2.new(0.05, 0, 0, #ZYROO.Buttons * 55)
+    button.BackgroundColor3 = initialState and Color3.fromRGB(0, 100, 0) or Color3.fromRGB(100, 0, 0)
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.Text = text .. ": " .. (initialState and "ON" or "OFF")
+    button.TextScaled = true
+    button.Font = Enum.Font.Gotham
+    button.Parent = ZYROO.MobileUI.ScrollingFrame
+    
+    button.MouseButton1Click:Connect(function()
+        toggleState = not toggleState
+        button.BackgroundColor3 = toggleState and Color3.fromRGB(0, 100, 0) or Color3.fromRGB(100, 0, 0)
+        button.Text = text .. ": " .. (toggleState and "ON" or "OFF")
+        callback(toggleState)
+    end)
+    
+    table.insert(ZYROO.Buttons, button)
+    ZYROO.MobileUI.ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, #ZYROO.Buttons * 55)
+end
+
+-- Funkce pro vytvoření slideru
+function CreateSlider(text, min, max, defaultValue, callback)
+    local sliderFrame = Instance.new("Frame")
+    sliderFrame.Name = text .. "Slider"
+    sliderFrame.Size = UDim2.new(0.9, 0, 0, 70)
+    sliderFrame.Position = UDim2.new(0.05, 0, 0, #ZYROO.Buttons * 75)
+    sliderFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    sliderFrame.Parent = ZYROO.MobileUI.ScrollingFrame
+    
+    local label = Instance.new("TextLabel")
+    label.Name = "Label"
+    label.Size = UDim2.new(1, 0, 0, 25)
+    label.Position = UDim2.new(0, 0, 0, 0)
+    label.BackgroundTransparency = 1
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.Text = text .. ": " .. defaultValue
+    label.TextScaled = true
+    label.Font = Enum.Font.Gotham
+    label.Parent = sliderFrame
+    
+    local slider = Instance.new("TextButton")
+    slider.Name = "Slider"
+    slider.Size = UDim2.new(1, -10, 0, 30)
+    slider.Position = UDim2.new(0, 5, 0, 30)
+    slider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    slider.Text = ""
+    slider.Parent = sliderFrame
+    
+    local fill = Instance.new("Frame")
+    fill.Name = "Fill"
+    fill.Size = UDim2.new((defaultValue - min) / (max - min), 0, 1, 0)
+    fill.Position = UDim2.new(0, 0, 0, 0)
+    fill.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+    fill.BorderSizePixel = 0
+    fill.Parent = slider
+    
+    local isSliding = false
+    
+    slider.MouseButton1Down:Connect(function()
+        isSliding = true
+    end)
+    
+    game:GetService("UserInputService").InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            isSliding = false
+        end
+    end)
+    
+    slider.MouseMoved:Connect(function()
+        if isSliding then
+            local mouse = game:GetService("Players").LocalPlayer:GetMouse()
+            local relativeX = math.clamp(mouse.X - slider.AbsolutePosition.X, 0, slider.AbsoluteSize.X)
+            local value = min + (relativeX / slider.AbsoluteSize.X) * (max - min)
+            value = math.floor(value)
+            
+            fill.Size = UDim2.new((value - min) / (max - min), 0, 1, 0)
+            label.Text = text .. ": " .. value
+            callback(value)
+        end
+    end)
+    
+    table.insert(ZYROO.Buttons, sliderFrame)
+    ZYROO.MobileUI.ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, #ZYROO.Buttons * 75)
+end
+
+-- Inicializace UI
+CreateMobileUI()
+
+-- FUNKCE PRO MOBILNÍ OVLÁDÁNÍ
+
+-- Fly funkce pro mobil
+function ToggleFly(state)
+    ZYROO.Config.Fly = state
+    if state then
+        local bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+        bodyVelocity.MaxForce = Vector3.new(4000, 4000, 4000)
+        bodyVelocity.Parent = ZYROO.HRP
+        
+        -- Touch controls pro fly
+        local touchStartPos = nil
+        local flying = false
+        
+        game:GetService("UserInputService").TouchStarted:Connect(function(touch)
+            touchStartPos = touch.Position
+            flying = true
+        end)
+        
+        game:GetService("UserInputService").TouchEnded:Connect(function(touch)
+            flying = false
+            bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+        end)
+        
+        game:GetService("RunService").RenderStepped:Connect(function()
+            if ZYROO.Config.Fly and flying and touchStartPos then
+                local currentTouch = game:GetService("UserInputService"):GetTouchLocation()
+                local delta = (currentTouch - touchStartPos)
+                
+                local moveDirection = Vector3.new(
+                    delta.X * 0.1,
+                    0,
+                    -delta.Y * 0.1
+                )
+                
+                bodyVelocity.Velocity = moveDirection
+            end
+        end)
+    else
+        if ZYROO.HRP:FindFirstChild("BodyVelocity") then
+            ZYROO.HRP.BodyVelocity:Destroy()
+        end
+    end
+end
+
+-- God Mode
+function ToggleGodMode(state)
+    ZYROO.Config.GodMode = state
+    if state then
+        game:GetService("RunService").Stepped:Connect(function()
+            if ZYROO.Config.GodMode and ZYROO.Character then
+                for _, part in pairs(ZYROO.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    end
+end
+
+-- Speed změna
+function ChangeSpeed(value)
+    ZYROO.Config.Speed = value
+    ZYROO.Humanoid.WalkSpeed = value
+end
+
+-- Jump Power změna
+function ChangeJumpPower(value)
+    ZYROO.Config.JumpPower = value
+    ZYROO.Humanoid.JumpPower = value
+end
+
+-- Noclip
+function ToggleNoclip(state)
+    ZYROO.Config.Noclip = state
+end
+
+-- Infinite Jump
+function ToggleInfiniteJump(state)
+    ZYROO.Config.InfiniteJump = state
+    if state then
+        game:GetService("UserInputService").JumpRequest:Connect(function()
+            if ZYROO.Config.InfiniteJump then
+                ZYROO.Humanoid:ChangeState("Jumping")
+            end
+        end)
+    end
+end
+
+-- Vytvoření tlačítek v UI
+
+-- Hlavní funkce
+CreateToggleButton("God Mode", false, ToggleGodMode)
+CreateToggleButton("Fly Mode", false, ToggleFly)
+CreateSlider("Walk Speed", 16, 200, 16, ChangeSpeed)
+CreateSlider("Jump Power", 50, 500, 50, ChangeJumpPower)
+CreateToggleButton("Noclip", false, ToggleNoclip)
+CreateToggleButton("Infinite Jump", false, ToggleInfiniteJump)
+
+-- Utility funkce
+CreateButton("Reset Character", function()
+    ZYROO.Character:BreakJoints()
+end)
+
+CreateButton("Rejoin Game", function()
+    game:GetService("TeleportService"):Teleport(game.PlaceId, ZYROO.Player)
+end)
+
+CreateButton("Server Hop", function()
+    local Http = game:GetService("HttpService")
+    local TPS = game:GetService("TeleportService")
+    local API = "https://games.roblox.com/v1/games/%s/servers/Public?sortOrder=%s&limit=%s"
+    
+    local _format = string.format(API, game.PlaceId, "Asc", 100)
+    local servers = Http:JSONDecode(game:HttpGet(_format))
+    
+    for i, v in next, servers.data do
+        if v.playing ~= v.maxPlayers then
+            TPS:TeleportToPlaceInstance(game.PlaceId, v.id)
+        end
+    end
+end)
+
+-- ESP funkce
+CreateToggleButton("Player ESP", false, function(state)
+    if state then
+        for _, player in pairs(game:GetService("Players"):GetPlayers()) do
+            if player ~= ZYROO.Player and player.Character then
+                CreateMobileESP(player)
+            end
+        end
+    else
+        for _, obj in pairs(workspace:GetChildren()) do
+            if obj:FindFirstChild("MOBILE_ESP") then
+                obj.MOBILE_ESP:Destroy()
+            end
+        end
+    end
+end)
+
+function CreateMobileESP(player)
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "MOBILE_ESP"
+    highlight.FillColor = Color3.new(1, 0, 0)
+    highlight.OutlineColor = Color3.new(1, 1, 1)
+    highlight.FillTransparency = 0.5
+    highlight.Parent = player.Character
+    
+    -- Zajistí, že ESP zůstane při respawnu
+    player.CharacterAdded:Connect(function(char)
+        wait(1)
+        local newHighlight = highlight:Clone()
+        newHighlight.Parent = char
+    end)
+end
+
+-- Combat funkce
+CreateToggleButton("Auto Click", false, function(state)
+    if state then
+        getgenv().autoClick = true
+        while autoClick do
+            wait(0.2)
+            -- Simulace kliknutí
+        end
+    else
+        getgenv().autoClick = false
+    end
+end)
+
+-- Visual efekty
+CreateButton("Rainbow Character", function()
+    spawn(function()
+        while wait(0.3) do
+            for _, part in pairs(ZYROO.Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.BrickColor = BrickColor.random()
+                end
+            end
+        end
+    end)
+end)
+
+CreateButton("Float Animation", function()
+    local animation = Instance.new("Animation")
+    animation.AnimationId = "rbxassetid://3541114300"
+    local animTrack = ZYROO.Humanoid:LoadAnimation(animation)
+    animTrack:Play()
+end)
+
+-- Toggle UI funkce
+ZYROO.MobileUI.ToggleButton.MouseButton1Click:Connect(function()
+    ZYROO.MobileUI.MainFrame.Visible = not ZYROO.MobileUI.MainFrame.Visible
+end)
+
+-- Noclip loop
+game:GetService("RunService").Stepped:Connect(function()
+    if ZYROO.Config.Noclip and ZYROO.Character then
+        for _, part in pairs(ZYROO.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+-- Character handler
+ZYROO.Player.CharacterAdded:Connect(function(character)
+    ZYROO.Character = character
+    ZYROO.Humanoid = character:WaitForChild("Humanoid")
+    ZYROO.HRP = character:WaitForChild("HumanoidRootPart")
+    wait(1)
+    ZYROO.Humanoid.WalkSpeed = ZYROO.Config.Speed
+    ZYROO.Humanoid.JumpPower = ZYROO.Config.JumpPower
+end)
+
+-- Notifikace načtení
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "ZYROO MOBILE",
+    Text = "Mobile Admin Panel loaded! Tap red button to open.",
+    Duration = 5
+})
+
+print("📱 ZYROO MOBILE ADMIN LOADED!")
+print("🔥 Tap the red button to open menu")
+print("👑 Mobile controls activated!")
