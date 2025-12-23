@@ -1,0 +1,129 @@
+-- Global settings pro snadné vypnutí
+getgenv().AimbotEnabled = false
+getgenv().ESPEnabled = true
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- === TVORBA GUI ===
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ExuLocker"
+ScreenGui.Parent = (gethui and gethui()) or game:GetService("CoreGui") -- Skryje GUI před detekcí v Robloxu
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "Main"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+MainFrame.BorderSizePixel = 0
+MainFrame.Position = UDim2.new(0.5, -60, 0.4, 0)
+MainFrame.Size = UDim2.new(0, 120, 0, 80)
+MainFrame.Active = true
+MainFrame.Draggable = true -- Funguje ve většině executorů
+
+local UICorner = Instance.new("UICorner", MainFrame)
+UICorner.CornerRadius = UDim.new(0, 8)
+
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1, 0, 0.4, 0)
+Title.Text = "AIM LOCKER"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.SourceSansBold
+
+local ToggleBtn = Instance.new("TextButton", MainFrame)
+ToggleBtn.Size = UDim2.new(0.8, 0, 0.4, 0)
+ToggleBtn.Position = UDim2.new(0.1, 0, 0.45, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ToggleBtn.Text = "OFF"
+ToggleBtn.TextColor3 = Color3.new(1, 0, 0)
+
+-- Kroužek zaměřovače
+local Circle = Instance.new("Frame", ScreenGui)
+Circle.Size = UDim2.new(0, 8, 0, 8)
+Circle.BackgroundColor3 = Color3.new(0, 1, 0)
+Circle.Visible = false
+Instance.new("UICorner", Circle).CornerRadius = UDim.new(1, 0)
+
+-- === LOGIKA POSOUVÁNÍ (Moderní metoda) ===
+local dragging, dragInput, dragStart, startPos
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+-- === FUNKCE ===
+ToggleBtn.MouseButton1Click:Connect(function()
+    getgenv().AimbotEnabled = not getgenv().AimbotEnabled
+    ToggleBtn.Text = getgenv().AimbotEnabled and "ON" or "OFF"
+    ToggleBtn.TextColor3 = getgenv().AimbotEnabled and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+    Circle.Visible = getgenv().AimbotEnabled
+end)
+
+function getClosest()
+    local target = nil
+    local dist = math.huge
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+            local pos, onScreen = Camera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
+            if onScreen then
+                local mag = (Vector2.new(pos.X, pos.Y) - UserInputService:GetMouseLocation()).Magnitude
+                if mag < dist then
+                    dist = mag
+                    target = v
+                end
+            end
+        end
+    end
+    return target
+end
+
+-- === AUTOMATICKÉ ESP ===
+local function addESP(p)
+    if p == LocalPlayer then return end
+    local function apply()
+        if p.Character then
+            local h = p.Character:FindFirstChild("Highlight") or Instance.new("Highlight", p.Character)
+            h.FillTransparency = 0.5
+            h.OutlineColor = Color3.new(1, 1, 1)
+            h.FillColor = Color3.fromRGB(255, 0, 0)
+        end
+    end
+    p.CharacterAdded:Connect(apply)
+    apply()
+end
+
+Players.PlayerAdded:Connect(addESP)
+for _, v in pairs(Players:GetPlayers()) do addESP(v) end
+
+-- === LOOP ===
+RunService.RenderStepped:Connect(function()
+    if getgenv().AimbotEnabled then
+        local target = getClosest()
+        if target and target.Character and target.Character:FindFirstChild("Head") then
+            local headPos = Camera:WorldToViewportPoint(target.Character.Head.Position)
+            Circle.Position = UDim2.new(0, headPos.X - 4, 0, headPos.Y - 4)
+            
+            -- Lock kamery
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Character.Head.Position)
+        end
+    end
+end)
