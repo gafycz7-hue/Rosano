@@ -1,0 +1,103 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- === NASTAVENÍ GUI ===
+local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+ScreenGui.Name = "AimbotLockerGui"
+
+-- Hlavní panel (Tabulka)
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 150, 0, 100)
+MainFrame.Position = UDim2.new(0.1, 0, 0.4, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.Active = true
+MainFrame.Draggable = true -- Umožňuje posouvání tabulky
+
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Text = "Aimbot Locker"
+Title.Size = UDim2.new(1, 0, 0.3, 0)
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.BackgroundTransparency = 1
+
+-- Tlačítko Lock Aim
+local LockButton = Instance.new("TextButton", MainFrame)
+LockButton.Size = UDim2.new(0.8, 0, 0.4, 0)
+LockButton.Position = UDim2.new(0.1, 0, 0.4, 0)
+LockButton.Text = "Lock Aim: OFF"
+LockButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+
+-- Kolečko (Zaměřovač)
+local Reticle = Instance.new("Frame", ScreenGui)
+Reticle.Size = UDim2.new(0, 10, 0, 10)
+Reticle.BackgroundColor3 = Color3.new(1, 0, 0)
+Reticle.Visible = false
+-- Uděláme z čtverce kolečko
+local Corner = Instance.new("UICorner", Reticle)
+Corner.CornerRadius = UDim.new(1, 0)
+
+-- === LOGIKA ===
+local locking = false
+local target = nil
+
+LockButton.MouseButton1Click:Connect(function()
+	locking = not locking
+	LockButton.Text = locking and "Lock Aim: ON" or "Lock Aim: OFF"
+	LockButton.BackgroundColor3 = locking and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
+	Reticle.Visible = locking
+end)
+
+-- Funkce pro nalezení nejbližšího hráče
+function getClosestPlayer()
+	local closest = nil
+	local shortestDistance = math.huge
+	for _, player in pairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			local pos = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
+			local mousePos = UserInputService:GetMouseLocation()
+			local distance = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
+			if distance < shortestDistance then
+				closest = player
+				shortestDistance = distance
+			end
+		end
+	end
+	return closest
+end
+
+-- === AUTOMATICKÉ ESP ===
+function createESP(player)
+	player.CharacterAdded:Connect(function(char)
+		local highlight = Instance.new("Highlight")
+		highlight.Parent = char
+		highlight.FillColor = Color3.new(1, 0, 0)
+		highlight.OutlineColor = Color3.new(1, 1, 1)
+	end)
+	-- Pro hráče, kteří už jsou ve hře
+	if player.Character then
+		local highlight = Instance.new("Highlight")
+		highlight.Parent = player.Character
+	end
+end
+
+for _, p in pairs(Players:GetPlayers()) do
+	if p ~= LocalPlayer then createESP(p) end
+end
+Players.PlayerAdded:Connect(createESP)
+
+-- === LOOP (AKTUALIZACE) ===
+RunService.RenderStepped:Connect(function()
+	if locking then
+		target = getClosestPlayer()
+		if target and target.Character and target.Character:FindFirstChild("Head") then
+			local headPos = Camera:WorldToViewportPoint(target.Character.Head.Position)
+			Reticle.Position = UDim2.new(0, headPos.X - 5, 0, headPos.Y - 5)
+			
+			-- Jemné zaměření kamery (Mobile friendly)
+			local lookAt = CFrame.new(Camera.CFrame.Position, target.Character.Head.Position)
+			Camera.CFrame = Camera.CFrame:Lerp(lookAt, 0.1)
+		end
+	end
+end)
